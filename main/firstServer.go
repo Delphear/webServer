@@ -10,124 +10,149 @@ import (
 	"strings"
 )
 
-func sayHelloName(w http.ResponseWriter,r *http.Request){
+func sayHelloName(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	fmt.Println("values",r.PostForm)
-	fmt.Println("form",r.Form)
-	fmt.Println("path :",r.URL.Path)
-	fmt.Println("scheme :",r.URL.Scheme)
+	fmt.Println("values", r.PostForm)
+	fmt.Println("form", r.Form)
+	fmt.Println("path :", r.URL.Path)
+	fmt.Println("scheme :", r.URL.Scheme)
 	fmt.Println(r.Form["url_long"])
-	for k,v := range r.Form{
-		fmt.Println("k :",k)
-		fmt.Println("v :",strings.Join(v,""))
+	for k, v := range r.Form {
+		fmt.Println("k :", k)
+		fmt.Println("v :", strings.Join(v, ""))
 	}
-	fmt.Fprintf(w,"hello")
+	fmt.Fprintf(w, "hello")
 
 }
-func login(w http.ResponseWriter,r *http.Request){
+func login(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	fmt.Println("method",r.Method)
+	fmt.Println("method", r.Method)
 	if r.Method == "GET" {
-		t,_ := template.ParseFiles("pages/login.html")
-		t.Execute(w,nil)
-	}else {
+		t, _ := template.ParseFiles("pages/login.html")
+		t.Execute(w, nil)
+	} else {
 		username := r.Form["username"]
 		password := r.Form["password"]
-		fmt.Println("username : ",username)
-		fmt.Println("password : ",password)
-		if  username[0] == "hh" && password[0] == "aa"{
-			t,_ := template.ParseFiles("pages/index.html")
-			t.Execute(w,nil)
-		}else {
-			t,_ := template.ParseFiles("pages/error.html")
-			t.Execute(w,nil)
+		fmt.Println("username : ", username)
+		fmt.Println("password : ", password)
+		if username[0] == "hh" && password[0] == "aa" {
+			t, _ := template.ParseFiles("pages/index.html")
+			t.Execute(w, nil)
+		} else {
+			t, _ := template.ParseFiles("pages/error.html")
+			t.Execute(w, nil)
 		}
 	}
 	/**
 	下拉菜单功能
 	*/
-	slice:=[]string{"apple","pear","banane"}
+	slice := []string{"apple", "pear", "banane"}
 	for _, v := range slice {
 		if v == r.Form.Get("fruit") {
-			fmt.Println("fruit",v)
+			fmt.Println("fruit", v)
 		}
 	}
 	/**
 	单选按钮
-	 */
-	slice1 := []string{"1","2"}
-	for _,v := range slice1{
+	*/
+	slice1 := []string{"1", "2"}
+	for _, v := range slice1 {
 		if v == r.Form.Get("gender") {
-			fmt.Println("gender",v)
+			fmt.Println("gender", v)
 		}
 	}
 	/**
 	复选框
-	 */
-	 slice2 := []string{"football","basketball","tennis"}
-	 a := contains(slice2,r.Form["interest"])
+	*/
+	slice2 := []string{"football", "basketball", "tennis"}
+	a := contains(slice2, r.Form["interest"])
 	if a {
 		fmt.Println("it is true")
-	}else {
+	} else {
 		fmt.Println("it is false")
 	}
 
 }
 
-func main(){
+func main() {
 	mux := &myMux{}
-	err := http.ListenAndServe(":9090",mux)
+	err := http.ListenAndServe(":9090", mux)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
+
 type myMux struct {
 }
 
-func (p *myMux)ServeHTTP(w http.ResponseWriter,r *http.Request){
+func (p *myMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
-		sayHelloName(w,r)
+		sayHelloName(w, r)
 		return
-	}else if r.URL.Path == "/login" {
-		login(w,r)
+	} else if r.URL.Path == "/login" {
+		login(w, r)
 		return
-	}else if r.URL.Path == "/upload" {
-		upload(w,r)
+	} else if r.URL.Path == "/upload" {
+		upload(w, r)
 		return
 	}
-	http.NotFound(w,r)
+	http.NotFound(w, r)
 	return
 }
-func upload(w http.ResponseWriter,r *http.Request){
+func upload(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		t,_ := template.ParseFiles("pages/upload.html")
-		t.Execute(w,nil)
-	}else {
+		t, _ := template.ParseFiles("pages/upload.html")
+		t.Execute(w, nil)
+	} else {
 		r.ParseMultipartForm(32 << 20)
-		file,handler,err := r.FormFile("uploadfile")
+		file, handler, err := r.FormFile("uploadfile")
 		if err != nil {
 			log.Fatal(err)
+			return
+		}
+		fmt.Println("file", file)
+		defer file.Close()
+		fmt.Fprintf(w, "%v", handler.Header)
+
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		file1, err := os.OpenFile("targetFile/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		defer file1.Close()
+		io.Copy(file1, file)
+		/*file,head,err := r.FormFile("uploadfile")
+		if err != nil {
+			fmt.Println(err)
 			return
 		}
 		defer file.Close()
-		fmt.Fprintf(w,"%v",handler.Header)
-		f,err := os.Open("./pages/" + handler.Filename)
+		fw,err := os.Create("targetFile/" + head.Filename)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println("Create file failed")
 			return
 		}
-		defer f.Close()
-		io.Copy(f,file)
+		defer fw.Close()
+		_,err = io.Copy(fw,file)
+		if err != nil {
+			fmt.Println("file save failed")
+			return
+		}*/
 	}
 }
 
-func contains(slice1,slice2 []string) bool{
+func contains(slice1, slice2 []string) bool {
 	m := make(map[interface{}]int)
 	err := true
-	for _,v := range slice1 {
-		m[v] ++
+	for _, v := range slice1 {
+		m[v]++
 	}
-	for _,v := range slice2 {
+	for _, v := range slice2 {
 		if m[v] <= 0 {
 			err = false
 			return err
